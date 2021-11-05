@@ -1,3 +1,8 @@
+" TODO: rewrite it in lua
+
+if exists("g:loaded_bbye") || &cp | finish | endif
+let g:loaded_bbye = 1
+
 function! s:bdelete(action, bang, buffer_name)
 	let buffer = s:str2bufnr(a:buffer_name)
 	let w:bbye_back = 1

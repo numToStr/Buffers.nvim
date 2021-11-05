@@ -4,8 +4,8 @@ local A = vim.api
 ---@class Opts
 ---@field non_modifiable boolean: Whether to delete non-modifiable buffers
 
-local function notify(dels, mods)
-	vim.notify("BufOnly: " .. dels .. " deleted buffer(s), " .. mods .. " modified buffer(s)")
+local function notify(deleted, modified)
+	vim.notify("Buffers :: " .. deleted .. " deleted buffer(s), " .. modified .. " modified buffer(s)")
 end
 
 ---Remove all buffers except the current one
