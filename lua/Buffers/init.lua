@@ -10,6 +10,15 @@ local function notify(msg)
 	vim.notify("Buffers: " .. msg)
 end
 
+---Create a scratch + unlisted buffers and also hides the [No Name] buffer
+local function scratch()
+	A.nvim_command("enew")
+	vim.bo.swapfile = false
+	vim.bo.bufhidden = "wipe"
+	vim.bo.buftype = ""
+	vim.bo.buflisted = false
+end
+
 ---Remove all buffers except the current one
 ---@param opts Opts
 function M.only(opts)
@@ -47,10 +56,15 @@ function M.clear(opts)
 			-- iter is modifiable or del_non_modifiable == true
 			-- `modifiable` check is needed as it will prevent closing file tree ie. NERD_tree
 			modified = modified + 1
-		elseif option(buf, "modifiable") or opts.non_modifiable then
+		elseif (option(buf, "modifiable") and option(buf, "buflisted")) or opts.non_modifiable then
 			A.nvim_buf_delete(buf, {})
 			deleted = deleted + 1
 		end
+	end
+
+	-- If current buffer is not scratch then and only create scratch buffer
+	if option(A.nvim_get_current_buf(), "buflisted") then
+		scratch()
 	end
 
 	notify(("%s deleted, %s modified"):format(deleted, modified))
@@ -67,14 +81,6 @@ function M.delete()
 	local modified = option(cur_buf, "modified")
 	if modified then
 		return notify("Current buffer is modified. Please save it before delete!")
-	end
-
-	local function scratch()
-		A.nvim_command("enew")
-		vim.bo.swapfile = false
-		vim.bo.bufhidden = "wipe"
-		vim.bo.buftype = ""
-		vim.bo.buflisted = false
 	end
 
 	local wins = A.nvim_list_wins()
@@ -99,6 +105,7 @@ function M.delete()
 		end
 	end
 
+	-- TODO: I don't know what this does
 	-- " Because tabbars and other appearing/disappearing windows change
 	-- " the window numbers, find where we were manually:
 	-- let back = filter(range(1, winnr("$")), "getwinvar(v:val, 'bbye_back')")[0]
@@ -108,6 +115,8 @@ function M.delete()
 	if cur_buf ~= A.nvim_get_current_buf() then
 		A.nvim_buf_delete(cur_buf, { force = true })
 	end
+
+	notify(("#%s deleted"):format(cur_buf))
 end
 
 return M
