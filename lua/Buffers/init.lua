@@ -11,12 +11,8 @@ local function notify(msg)
 end
 
 ---Create a scratch + unlisted buffers and also hides the [No Name] buffer
-local function scratch()
-	A.nvim_command("enew")
-	vim.bo.swapfile = false
-	vim.bo.bufhidden = "wipe"
-	vim.bo.buftype = ""
-	vim.bo.buflisted = false
+local function scratch(win)
+	A.nvim_win_set_buf(win or 0, A.nvim_create_buf(false, true))
 end
 
 ---Remove all buffers except the current one
@@ -35,7 +31,7 @@ function M.only(opts)
 			-- `modifiable` check is needed as it will prevent closing file tree ie. NERD_tree
 			modified = modified + 1
 		elseif buf ~= cur and (option(buf, "modifiable") or opts.non_modifiable) then
-			A.nvim_buf_delete(buf, {})
+			A.nvim_buf_delete(buf, { force = true })
 			deleted = deleted + 1
 		end
 	end
@@ -56,15 +52,17 @@ function M.clear(opts)
 			-- iter is modifiable or del_non_modifiable == true
 			-- `modifiable` check is needed as it will prevent closing file tree ie. NERD_tree
 			modified = modified + 1
-		elseif (option(buf, "modifiable") and option(buf, "buflisted")) or opts.non_modifiable then
-			A.nvim_buf_delete(buf, {})
+		elseif (option(buf, "modifiable") or opts.non_modifiable) and option(buf, "buflisted") then
+			A.nvim_buf_delete(buf, { force = true })
 			deleted = deleted + 1
 		end
 	end
 
 	-- If current buffer is not scratch then and only create scratch buffer
-	if option(A.nvim_get_current_buf(), "buflisted") then
+	local cur_buf = A.nvim_get_current_buf()
+	if option(cur_buf, "buflisted") then
 		scratch()
+		A.nvim_buf_delete(cur_buf, { force = true })
 	end
 
 	notify(("%s deleted, %s modified"):format(deleted, modified))
@@ -74,12 +72,17 @@ end
 function M.delete()
 	local cur_buf = A.nvim_get_current_buf()
 
+	-- If buffer is not listed that means it is a scratch buffer
+	-- In that case just return silently
+	if not option(cur_buf, "buflisted") then
+		return
+	end
+
 	if not A.nvim_buf_is_loaded(cur_buf) then
 		return notify(("Invalid buffer - %s"):format(cur_buf))
 	end
 
-	local modified = option(cur_buf, "modified")
-	if modified then
+	if option(cur_buf, "modified") then
 		return notify("Current buffer is modified. Please save it before delete!")
 	end
 
@@ -100,7 +103,7 @@ function M.delete()
 
 			-- If all the windows holds the current buffer then create a scratch buffer on top of the current buffer
 			if A.nvim_get_current_buf() == cur_buf then
-				scratch()
+				scratch(win)
 			end
 		end
 	end
